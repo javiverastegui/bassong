@@ -1,4 +1,4 @@
-// AlphaBeat — A to Z song quiz: daily wheels (general and by decade) plus an unlimited mode.
+// Bassong — A to Z song quiz: daily wheels (general and by decade) plus an unlimited mode.
 (() => {
   'use strict';
 
@@ -83,12 +83,44 @@
     });
   }
 
-  function pixelArt(rows, fill) {
-    let rects = '';
-    rows.forEach((r, y) => [...r].forEach((c, x) => { if (c === '#') rects += `<rect x="${x}" y="${y}" width="1" height="1"/>`; }));
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${rows[0].length} ${rows.length}" shape-rendering="crispEdges" fill="${fill}">${rects}</svg>`;
+  // The mascot: a largemouth bass, 24 x 13 pixels, facing left. Two frames: mouth shut and mouth open.
+  const FISH_COLOURS = { k: '#000000', g: '#5aa83c', d: '#2f6e2c', b: '#f0ecc0', w: '#ffffff', f: '#ffb43d', m: '#ff3fa4' };
+  const FISH_SHUT = [
+    '..........kkkk..........',
+    '........kkffffk.........',
+    '.....kkkkgfffgkkk.....kk',
+    '...kkgggggggggggdkk..kfk',
+    '..kgggwwgggggggggddkkffk',
+    '.kgggwkwgggdddddggddfffk',
+    'kggggwwggdddddddddgdfffk',
+    'kgggggggggggggggggddffk.',
+    'kkkkgggbbbbbbbbbggdkkffk',
+    '.kkbbbbbbbbbbbbbbdk..kfk',
+    '...kkbbbbbbffbbkkk....kk',
+    '.....kkkkkkfffk.........',
+    '...........kkk..........',
+  ];
+  const FISH_OPEN = FISH_SHUT.map((row, y) => (
+    y === 7 ? 'kgggggggggggggggggddffk.'
+      : y === 8 ? 'kmmmkggbbbbbbbbbggdkkffk'
+      : y === 9 ? 'kmmmkbbbbbbbbbbbbdk..kfk'
+      : y === 10 ? '.kkkkbbbbbbffbbkkk....kk'
+      : row));
+
+  // Paints rows of palette letters on a canvas and returns it as a data URL.
+  function rowsSprite(rows, colours) {
+    const cv = document.createElement('canvas');
+    if (!cv.getContext) return '';
+    cv.width = Math.max(...rows.map((r) => r.length));
+    cv.height = rows.length;
+    const g = cv.getContext('2d');
+    rows.forEach((r, y) => [...r].forEach((c, x) => {
+      if (!colours[c]) return;
+      g.fillStyle = colours[c];
+      g.fillRect(x, y, 1, 1);
+    }));
+    return cv.toDataURL();
   }
-  const NOTE = ['..######', '..######', '..#....#', '..#....#', '..#....#', '.##...##', '###..###', '##...##.'];
 
   // Pixel-art vinyl record, painted pixel by pixel on a small canvas and scaled up unsmoothed.
   // Grooves run right to the edge; the letters sit directly on the vinyl.
@@ -153,6 +185,8 @@
   }
   const IDLE_ORBS = DISCO.map((hue, i) => orb(DISCO_DARK[i], hue, hue));
 
+  const FISH_A = rowsSprite(FISH_SHUT, FISH_COLOURS);
+
   function setupStage() {
     const root = document.documentElement;
     if (!root) return;
@@ -160,6 +194,8 @@
     root.style.setProperty('--orb-ok', orb('#3dff7a', '#0f5a28', '#e3ffd9'));
     root.style.setProperty('--orb-ko', orb('#ff4265', '#5a0a1c', '#ffc2cc'));
     root.style.setProperty('--orb-passed', orb('#1a0b3a', '#5b46a0', '#5b46a0'));
+    root.style.setProperty('--fish-a', `url(${FISH_A})`);
+    root.style.setProperty('--fish-b', `url(${rowsSprite(FISH_OPEN, FISH_COLOURS)})`);
   }
 
   // Backdrop: a wall of equaliser blocks that sways slowly, and livens up while a song plays.
@@ -394,6 +430,33 @@
     }
   }
 
+  // ---------- the mascot talks ----------
+  const LINES = {
+    hello: ['Hi, I\'m Bassong. Pick a wheel!'],
+    all: ['Every decade in one wheel.'],
+    decade: ['Good vintage, that one.', 'Ah, a classic catch.'],
+    unl: ['Three strikes and you\'re fish food.'],
+    ready: ['Ready? Dropping the needle…'],
+    ok: ['Nice catch!', 'Hooked it!', 'Reel good ear.', 'That one\'s a keeper.', 'Fin-tastic.'],
+    ko: ['That one got away.', 'Off the hook…', 'Holy mackerel, no.', 'Something\'s fishy there.'],
+    pass: ['Throwing it back.', 'We\'ll circle back.', 'Let it swim for now.'],
+    slow: ['Too slow! I felt that.'],
+    hurry: ['Hurry, I\'m drying out here!'],
+    tap: ['Tap play, my speakers are shy.'],
+    win: ['A full wheel! You\'re off the scale.'],
+    lose: ['Tomorrow\'s another tide.'],
+  };
+  let talkTimer = 0;
+  function say(key, text) {
+    const options = LINES[key] || [];
+    const line = text || options[Math.floor(Math.random() * options.length)] || '';
+    $('say').textContent = line;
+    fx($('say'), 'in');
+    $('fish').classList.add('talk');
+    const mine = ++talkTimer;
+    setTimeout(() => { if (mine === talkTimer) $('fish').classList.remove('talk'); }, 1300);
+  }
+
   // ---------- rendering ----------
   function show(name) {
     for (const [k, el] of Object.entries(panels)) el.hidden = k !== name;
@@ -459,6 +522,7 @@
       stopSnippet(label);
       loading = true;   // keep the clock paused until the player taps
       $('btn-play').hidden = false;
+      say('tap');
     };
 
     player.onplaying = () => {
@@ -597,6 +661,7 @@
     $('btn-play').hidden = true;
     $('btn-pass').hidden = game.unl;
     $('hint').textContent = 'GET READY';
+    say('ready');
     fx($('hint'), 'in');
     $('feedback').textContent = '';
     setBar(0);
@@ -645,6 +710,7 @@
       if (game.unl) judge(null); else finish(); // unlimited: running out of time on a song costs a life
       return;
     }
+    if (!game.unl && game.time === 20) say('hurry');
     paint();
     saveGame();
   }
@@ -701,6 +767,7 @@
       fb.textContent = `✔ ${it.title} — ${it.artist}`;
       fb.className = 'feedback ok';
       sfxHit(game.hits);
+      say('ok');
       fx(tiles[game.idx], 'ok');
       fx($('hits'), 'bump');
       setTimeout(() => { if (run === runId) burst(['#3dff7a', '#ffe45c', '#ffffff', '#29e7ff'], 18, 2.2); }, 330); // as the flip lands
@@ -712,6 +779,7 @@
       fb.textContent = `${text === null ? '⏱ TIME UP' : '✖ IT WAS'}: ${it.title} — ${it.artist}`;
       fb.className = 'feedback ko';
       sfxMiss();
+      say(text === null ? 'slow' : 'ko');
       fx(tiles[game.idx], 'ko');
       fx($('misses'), 'bump');
       fx($('panel'), 'shake');
@@ -732,6 +800,7 @@
     it.passed = true;
     it.heard = false; // a passed letter plays its snippet again when it comes back round
     sfxPass();
+    say('pass');
     fx(tiles[game.idx], 'pass');
     advance();
   }
@@ -770,6 +839,7 @@
         (g.newBest ? ' New personal best!' : g.best ? ` Your best: ${g.best}.` : '');
       $('next').textContent = '';
       wheel.classList.remove('free');
+      say('', `${plural(g.hits, 'song')}. Not bad for a land creature.`);
       if (g.newBest || won) for (let k = 0; k < 4; k++) setTimeout(() => burst(DISCO, 22, 3), k * 450);
     } else {
       const pending = total - g.hits - g.misses;
@@ -783,6 +853,7 @@
       turn -= 360;
       wheel.style.setProperty('--rot', turn + 'deg');
       if (wheel.dataset) wheel.dataset.end = won ? 'win' : 'lose';
+      say(won ? 'win' : 'lose');
       if (won) for (let k = 0; k < 6; k++) setTimeout(() => burst(DISCO, 22, 3), k * 450);
 
       const countdown = () => {
@@ -824,11 +895,11 @@
     const link = location.href.split('?')[0];
     let text;
     if (g.unl) {
-      text = `AlphaBeat Unlimited 🎵 I named ${plural(g.hits, 'song')} in a row. Can you beat that?\n${link}`;
+      text = `Bassong Unlimited 🎵 I named ${plural(g.hits, 'song')} in a row. Can you beat that?\n${link}`;
     } else {
       const squares = g.items.map((it) => (it.state === 'ok' ? '🟩' : it.state === 'ko' ? '🟥' : '⬜')).join('');
       const label = MODES.find((x) => x.id === g.mode).label;
-      text = `AlphaBeat ${label} #${day.no} 🎵 ${g.hits}/${g.items.length}${g.hits === g.items.length ? ' ✅' : ''}\n${squares}\n${link}`;
+      text = `Bassong ${label} #${day.no} 🎵 ${g.hits}/${g.items.length}${g.hits === g.items.length ? ' ✅' : ''}\n${squares}\n${link}`;
     }
     const note = $('shared');
     try {
@@ -852,7 +923,7 @@
     el.type = 'button';
     el.className = 'mode';
     el.textContent = m.label;
-    el.addEventListener('click', () => { beep(520, 0.04); selectMode(m.id); });
+    el.addEventListener('click', () => { beep(520, 0.04); selectMode(m.id); say(DECADES[m.id] ? 'decade' : m.id); });
     $('modes').appendChild(el);
     modeButtons.push({ id: m.id, el });
   });
@@ -899,10 +970,10 @@
     } catch { /* ignore */ }
   }
 
-  $('logo-art').innerHTML = pixelArt(NOTE, '#ffe600');
+  $('logo-art').style.backgroundImage = `url(${FISH_A})`;
   const icon = document.createElement('link');
   icon.rel = 'icon';
-  icon.href = 'data:image/svg+xml,' + encodeURIComponent(pixelArt(NOTE, '#ff2e88'));
+  icon.href = FISH_A;
   document.head.appendChild(icon);
 
   drawDisc($('disc'));
@@ -913,6 +984,7 @@
   paintSfx();
   show('start');
   selectMode(load('ab_mode') || 'all');
+  say('hello');
 
-  window.__alphabeat = { normalize, isCorrect, selectMode, peek: () => game && game.items[game.idx] };
+  window.__alphabeat = /* test hook */ { normalize, isCorrect, selectMode, peek: () => game && game.items[game.idx] };
 })();

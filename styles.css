@@ -1,4 +1,4 @@
-/* AlphaBeat — 8-bit discotheque. Flat colours, hard edges, everything on a pixel grid. */
+/* Bassong — 8-bit discotheque. Flat colours, hard edges, everything on a pixel grid. */
 :root {
   --bg: #0e0320;
   --panel: #170836;
@@ -43,8 +43,7 @@ body {
   font: 18px/1 var(--px); color: var(--yellow); text-shadow: 3px 3px 0 var(--pink), 6px 6px 0 #000;
 }
 .logo b { color: var(--cyan); font-weight: normal; }
-.logo-art { width: 32px; height: 32px; display: block; flex: none; }
-.logo-art svg { display: block; width: 100%; height: 100%; }
+.logo-art { width: 48px; height: 28px; display: block; flex: none; background: center / contain no-repeat; image-rendering: pixelated; }
 
 .controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
 .vol { display: inline-flex; align-items: center; gap: 8px; font: 9px/1 var(--px); color: var(--dim); }
@@ -380,3 +379,30 @@ body.app { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-
 .hud.unl .t-ko::before { content: "♥"; }
 .platter.free { animation: spin-free 7s linear infinite; }
 @keyframes spin-free { to { transform: rotate(360deg); } }
+
+/* ---------- Mascot: the talking bass sits on the panel's top edge, speech bubble to its left ---------- */
+.mascot {
+  flex: none; width: 100%; max-width: 520px; min-height: 58px; margin: auto auto 0;
+  display: flex; align-items: flex-end; justify-content: flex-end; gap: 12px; padding: 0 6px;
+}
+.app .mascot + .panel { margin: 0 auto auto; max-height: calc(100% - 100px); }
+.fish {
+  flex: none; width: 96px; height: 52px; margin-bottom: -4px;
+  background: var(--fish-a) center / 100% 100% no-repeat; image-rendering: pixelated;
+  animation: swim 2.4s ease-in-out infinite alternate;
+}
+@keyframes swim { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-5px) rotate(2deg); } }
+/* talking: the mouth flaps between two frames */
+.fish.talk { animation: swim 2.4s ease-in-out infinite alternate, yap .26s steps(1) infinite; }
+@keyframes yap { 50% { background-image: var(--fish-b); } }
+.bubble {
+  position: relative; margin: 0 0 14px; padding: 6px 10px; max-width: 360px;
+  font: 20px/1.1 var(--body); color: var(--ink); background: var(--text);
+  box-shadow: 0 0 0 3px #000;
+}
+.bubble:empty { visibility: hidden; }
+/* pixel tail pointing at the fish */
+.bubble::after { content: ""; position: absolute; right: -9px; bottom: 6px; width: 6px; height: 6px; background: var(--text); box-shadow: 3px 3px 0 0 var(--text), 0 0 0 3px #000, 3px 3px 0 3px #000; z-index: -1; }
+.bubble[data-fx="in"] { animation: pop .28s cubic-bezier(.2, 1.4, .4, 1); transform-origin: right bottom; }
+@media (max-width: 860px) { .fish { width: 74px; height: 40px; } .bubble { font-size: 18px; } .mascot { min-height: 46px; } }
+@media (max-height: 600px) { .mascot { display: none; } .app .panel { margin: auto; } }

@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AlphaBeat — The daily A to Z song quiz</title>
+  <title>Bassong — The daily A to Z song quiz</title>
   <meta name="description" content="A new music wheel every day: 26 letters, 26 five-second song snippets, one listen per lap. Name every song before the clock runs out.">
-  <meta property="og:title" content="AlphaBeat — The daily A to Z song quiz">
+  <meta property="og:title" content="Bassong — The daily A to Z song quiz">
   <meta property="og:description" content="26 letters, 26 five-second snippets, one listen per lap. New wheel every day.">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#0e0320">
@@ -18,8 +18,8 @@
 <body class="app">
   <canvas id="bg" class="bg" aria-hidden="true"></canvas>
   <header class="top">
-    <a class="logo" href="./" aria-label="AlphaBeat home">
-      <span id="logo-art" class="logo-art" aria-hidden="true"></span>ALPHA<b>BEAT</b>
+    <a class="logo" href="./" aria-label="Bassong home">
+      <span id="logo-art" class="logo-art" aria-hidden="true"></span><span>BAS<b>SONG</b></span>
     </a>
     <span class="badge">DAILY WHEEL <span id="day-no">#1</span></span>
     <div class="controls">
@@ -36,6 +36,12 @@
     </div>
 
     <section class="game" aria-label="Game">
+      <!-- Mascot: the bass comments on the game from a speech bubble -->
+      <div class="mascot">
+        <p id="say" class="bubble" aria-live="polite"></p>
+        <div id="fish" class="fish" aria-hidden="true"></div>
+      </div>
+
       <div class="panel" id="panel">
         <div id="p-start">
           <h1>Name that tune,<br>A to Z</h1>
@@ -103,7 +109,7 @@
     <p><strong>Wheels:</strong> GENERAL mixes every decade; 70s to 10s stick to one. Each has a new wheel every day, the same for everybody, and one attempt.</p>
     <p><strong>Unlimited:</strong> no wheel. Songs keep coming, 25 seconds each, until you make 3 mistakes. Play it as often as you like.</p>
     <div class="dlg-foot">
-      <span class="note"><a href="privacidad.html">Privacy</a> · © <span id="year"></span> AlphaBeat</span>
+      <span class="note"><a href="privacidad.html">Privacy</a> · © <span id="year"></span> Bassong</span>
       <form method="dialog"><button class="btn btn-main" type="submit">GOT IT</button></form>
     </div>
   </dialog>
