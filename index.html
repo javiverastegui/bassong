@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AlphaBeat — The daily A to Z song quiz</title>
+  <meta name="description" content="A new music wheel every day: 26 letters, 26 five-second song snippets, one listen per lap. Name every song before the clock runs out.">
+  <meta property="og:title" content="AlphaBeat — The daily A to Z song quiz">
+  <meta property="og:description" content="26 letters, 26 five-second snippets, one listen per lap. New wheel every day.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0e0320">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+
+</head>
+<body class="app">
+  <canvas id="bg" class="bg" aria-hidden="true"></canvas>
+  <header class="top">
+    <a class="logo" href="./" aria-label="AlphaBeat home">
+      <span id="logo-art" class="logo-art" aria-hidden="true"></span>ALPHA<b>BEAT</b>
+    </a>
+    <span class="badge">DAILY WHEEL <span id="day-no">#1</span></span>
+    <div class="controls">
+      <label class="vol">VOL <input id="vol" type="range" min="0" max="100" step="5" value="70"></label>
+      <button id="btn-how" class="btn-small" type="button">? HOW TO PLAY</button>
+      <button id="btn-sfx" class="btn-small" type="button" aria-pressed="true">SFX ON</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="hud" class="hud" aria-label="Scoreboard">
+      <div><span>TIME</span><b id="time" class="time" aria-label="Seconds left">240</b></div>
+      <div><span>HITS</span><b><span id="hits" class="t-ok">0</span><span id="misses" class="t-ko">0</span></b></div>
+    </div>
+
+    <section class="game" aria-label="Game">
+      <div class="panel" id="panel">
+        <div id="p-start">
+          <h1>Name that tune,<br>A to Z</h1>
+          <div id="modes" class="modes" role="group" aria-label="Game mode"></div>
+          <p id="mode-blurb"></p>
+          <button id="btn-start" class="btn btn-main blink" type="button">▶ PRESS START</button>
+          <p id="start-note" class="note"></p>
+        </div>
+
+        <div id="p-play" hidden>
+          <p id="hint" class="hint"></p>
+          <div id="snippet" class="snippet" aria-live="polite">
+            <span id="eq" class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <span id="snippet-label">LOADING…</span>
+            <span id="snippet-bar" class="bar" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <button id="btn-play" class="btn btn-main" type="button" hidden>▶ TAP TO PLAY</button>
+          <form id="form" autocomplete="off">
+            <label class="sr" for="answer">Song title</label>
+            <input id="answer" type="text" placeholder="SONG TITLE…" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send">
+            <div class="row">
+              <button class="btn btn-main" type="submit">ENTER</button>
+              <button id="btn-pass" class="btn" type="button">PASS ▶▶</button>
+              <button id="btn-quit" class="btn-small quit" type="button">✕ MENU</button>
+            </div>
+          </form>
+          <p id="feedback" class="feedback" role="status"></p>
+        </div>
+
+        <div id="p-end" hidden>
+          <h2 id="end-title"></h2>
+          <p id="end-summary"></p>
+          <p id="next" class="note"></p>
+          <div class="row">
+            <button id="btn-share" class="btn btn-main" type="button">SHARE RESULT</button>
+            <button id="btn-again" class="btn btn-main" type="button" hidden>▶ PLAY AGAIN</button>
+            <button id="btn-tracks" class="btn" type="button">TRACKLIST</button>
+            <button id="btn-menu" class="btn" type="button">MENU</button>
+          </div>
+          <p id="shared" class="feedback" role="status"></p>
+        </div>
+      </div>
+
+      <!-- Giant record: the letters ride on it and it turns to bring the current one under the needle -->
+      <div class="deck">
+        <span id="needle" class="needle" aria-hidden="true">▼</span>
+        <div id="fx" class="fx" aria-hidden="true"></div>
+        <div id="wheel" class="platter">
+          <div id="disc" class="disc" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <dialog id="dlg-how" class="dlg" aria-labelledby="how-title">
+    <h2 id="how-title">How to play</h2>
+    <ol>
+      <li>Press <strong>START</strong>. You have 240 seconds for the whole wheel.</li>
+      <li>For each letter a song plays for 5 seconds. Its title starts with that letter, or contains it when the hint says so.</li>
+      <li>Type the title and hit Enter. Spelling does not need to be perfect.</li>
+      <li>Not sure? Press <strong>PASS</strong> (or Esc). The letter comes back on the next lap and its 5 seconds play once more.</li>
+      <li>Name all the songs before the clock runs out to complete the wheel.</li>
+    </ol>
+    <p><strong>Wheels:</strong> GENERAL mixes every decade; 70s to 10s stick to one. Each has a new wheel every day, the same for everybody, and one attempt.</p>
+    <p><strong>Unlimited:</strong> no wheel. Songs keep coming, 25 seconds each, until you make 3 mistakes. Play it as often as you like.</p>
+    <div class="dlg-foot">
+      <span class="note"><a href="privacidad.html">Privacy</a> · © <span id="year"></span> AlphaBeat</span>
+      <form method="dialog"><button class="btn btn-main" type="submit">GOT IT</button></form>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-tracks" class="dlg dlg-wide" aria-labelledby="tracks-title">
+    <h2 id="tracks-title">Today's tracklist</h2>
+    <ul id="tracklist" class="tracklist"></ul>
+    <div class="dlg-foot">
+      <span class="note">Song previews provided courtesy of iTunes.</span>
+      <form method="dialog"><button class="btn btn-main" type="submit">CLOSE</button></form>
+    </div>
+  </dialog>
+
+  <script src="songs.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+/* AlphaBeat — 8-bit discotheque. Flat colours, hard edges, everything on a pixel grid. */
+:root {
+  --bg: #0e0320;
+  --panel: #170836;
+  --line: #4a2f8f;
+  --text: #fff7ff;
+  --dim: #b9a7e6;
+  --pink: #ff3fa4;
+  --orange: #ff8a3d;
+  --yellow: #ffe45c;
+  --green: #3dff7a;
+  --cyan: #29e7ff;
+  --purple: #a66bff;
+  --ok: #3dff7a;
+  --ko: #ff4265;
+  --ink: #1a0633;
+  --px: "Press Start 2P", "Courier New", monospace;
+  --body: "VT323", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; min-height: 100vh; overflow-x: hidden;
+  color: var(--text); background: var(--bg);
+  font: 22px/1.25 var(--body);
+}
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+/* ---------- Backdrop: equaliser wall painted on a canvas in app.js ---------- */
+.bg { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; image-rendering: pixelated; }
+
+.top, main, .foot { position: relative; z-index: 1; }
+
+/* ---------- Header ---------- */
+.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  max-width: 1040px; margin: 0 auto; padding: 16px;
+}
+.logo {
+  display: inline-flex; align-items: center; gap: 12px; text-decoration: none;
+  font: 18px/1 var(--px); color: var(--yellow); text-shadow: 3px 3px 0 var(--pink), 6px 6px 0 #000;
+}
+.logo b { color: var(--cyan); font-weight: normal; }
+.logo-art { width: 32px; height: 32px; display: block; flex: none; }
+.logo-art svg { display: block; width: 100%; height: 100%; }
+
+.controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
+.vol { display: inline-flex; align-items: center; gap: 8px; font: 9px/1 var(--px); color: var(--dim); }
+.vol input {
+  -webkit-appearance: none; appearance: none; width: 110px; height: 12px; margin: 0; cursor: pointer;
+  background: #000; border: 3px solid var(--dim); border-radius: 0;
+}
+.vol input::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 12px; height: 22px;
+  background: var(--yellow); border: 3px solid #000; border-radius: 0;
+}
+.vol input::-moz-range-thumb { width: 8px; height: 16px; background: var(--yellow); border: 3px solid #000; border-radius: 0; }
+.vol input:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+
+main { max-width: 1040px; margin: 0 auto; padding: 0 16px 32px; }
+
+/* ---------- Scoreboard ---------- */
+.hud {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 200px)); justify-content: center; gap: 12px;
+  margin: 30px 0 22px; text-align: center; font: 9px/1.8 var(--px);
+}
+.hud div { padding: 10px 6px; background: #000; border: 4px solid var(--line); }
+.hud span { display: block; color: var(--pink); }
+.hud b { font-weight: normal; font-size: 14px; color: var(--text); }
+.hud b span { display: inline; }
+.hud div:first-child { border-color: var(--yellow); }
+.hud .time { color: var(--yellow); }
+.hud .time.low { color: var(--ko); animation: blink .5s steps(2) infinite; }
+.hud .t-ok { color: var(--ok); margin-right: 12px; }
+.hud .t-ok::before { content: "✔"; }
+.hud .t-ko { color: var(--ko); }
+.hud .t-ko::before { content: "✖"; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.badge { font: 9px/1 var(--px); color: var(--ink); background: var(--yellow); padding: 7px 8px; box-shadow: 3px 3px 0 #000; }
+.badge span { color: inherit; }
+.top .badge { margin-right: auto; }
+
+@media (max-width: 860px) {
+  .logo { font-size: 14px; }
+  .hud { font-size: 8px; gap: 8px; margin-top: 10px; }
+  .hud b { font-size: 12px; }
+}
+
+/* ---------- Game: panel on top, the giant record below ---------- */
+.panel { max-width: 720px; margin: 0 auto; }
+
+/* Only the top slice of the record shows; the rest hangs below the fold of the deck. */
+.deck {
+  --d: clamp(820px, 112vw, 1500px);
+  position: relative; width: 100vw; margin: 30px 0 44px calc(50% - 50vw);
+  height: calc(var(--d) * .3 + 36px); overflow: hidden;
+  image-rendering: pixelated; border-bottom: 4px solid #000;
+}
+.needle {
+  position: absolute; left: 50%; top: 0; z-index: 3; width: 40px; margin-left: -20px; text-align: center;
+  font: 22px/1 var(--px); color: var(--yellow); text-shadow: 3px 3px 0 #000;
+  animation: nudge .9s steps(2) infinite;
+}
+@keyframes nudge { 50% { transform: translateY(5px); } }
+.platter {
+  position: absolute; left: 50%; top: 36px; width: var(--d); height: var(--d); margin-left: calc(var(--d) / -2);
+  container-type: inline-size;
+  transform: rotate(var(--rot, 0deg)); transition: transform .7s cubic-bezier(.3, 1.25, .5, 1); will-change: transform;
+}
+.disc { position: absolute; inset: 0; background-size: 100% 100%; }
+
+/* Letters: the tile holds the place on the record (and stays upright while it turns);
+   the orb inside is the pixel-art face, and is what animates. */
+.tile {
+  position: absolute; z-index: 1; width: 7.4%; aspect-ratio: 1; perspective: 300px;
+  transform: translate(-50%, -50%) rotate(calc(var(--rot, 0deg) * -1)) scale(var(--s, 1));
+  transition: transform .7s cubic-bezier(.3, 1.25, .5, 1);
+}
+.orb {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font: 2.5cqw/1 var(--px); padding-left: .3cqw;
+  background: var(--a) center / 100% 100% no-repeat; color: var(--ca);
+}
+.tile.passed .orb { background-image: var(--orb-passed); color: #8f7bd0; }
+.tile.ok .orb { background-image: var(--orb-ok); color: #05310f; }
+.tile.ko .orb { background-image: var(--orb-ko); color: #fff; }
+.tile.now .orb { background-image: var(--orb-now); color: var(--ink); }
+.tile.now { z-index: 3; --s: 1.22; }
+
+/* ---------- Animations: each one answers something the player did ---------- */
+/* opening: letters drop onto the record, nearest the needle first */
+.intro .orb { animation: drop .5s cubic-bezier(.2, 1.5, .4, 1) backwards; animation-delay: calc(var(--near) * 55ms + 650ms); }
+@keyframes drop { from { transform: translateY(-140%) scale(.3); opacity: 0; } }
+
+/* answer: the letter flips over to show its result, then lands */
+.tile[data-fx="ok"] .orb { animation: flip-ok .75s ease-in-out; }
+@keyframes flip-ok {
+  0%   { transform: rotateX(0); background-image: var(--orb-now); color: var(--ink); }
+  42%  { transform: rotateX(90deg); background-image: var(--orb-now); color: var(--ink); }
+  43%  { transform: rotateX(90deg); background-image: var(--orb-ok); color: #05310f; }
+  70%  { transform: rotateX(0) translateY(-26%) scale(1.2); }
+  86%  { transform: translateY(4%) scale(.94); }
+  100% { transform: none; }
+}
+.tile[data-fx="ko"] .orb { animation: flip-ko .85s ease-in-out; }
+@keyframes flip-ko {
+  0%   { transform: rotateX(0); background-image: var(--orb-now); color: var(--ink); }
+  36%  { transform: rotateX(90deg); background-image: var(--orb-now); color: var(--ink); }
+  37%  { transform: rotateX(90deg); background-image: var(--orb-ko); color: #fff; }
+  58%  { transform: rotateX(0); }
+  68%  { transform: translateX(-12%); }
+  78%  { transform: translateX(12%); }
+  88%  { transform: translateX(-7%); }
+  100% { transform: none; }
+}
+/* pass: the letter ducks as the record moves on */
+.tile[data-fx="pass"] .orb { animation: duck .4s ease-out; }
+@keyframes duck { 40% { transform: translateY(16%) scale(.8); } }
+
+/* confetti pieces are positioned from the letter under the needle */
+.fx { position: absolute; left: 50%; top: 80px; z-index: 5; width: 0; height: 0; pointer-events: none; }
+.fx i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; }
+.app .deck { overflow: visible; transition: height .9s cubic-bezier(.2, 1.05, .3, 1); }
+/* before START the record waits below the screen, and the panel has the stage to itself */
+.app:not(.started) .deck { height: 0; }
+.app:not(.started) .needle, .app:not(.started) .fx { visibility: hidden; }
+
+/* the needle taps when a new letter arrives, then goes back to idling */
+.needle[data-fx="tap"] { animation: tap .35s ease-out, nudge .9s steps(2) .35s infinite; }
+@keyframes tap { 40% { transform: translateY(14px); } }
+
+/* panels and clues slide in */
+.panel > div:not([hidden]) { animation: rise .35s cubic-bezier(.2, 1.2, .4, 1); }
+@keyframes rise { from { transform: translateY(16px); opacity: 0; } }
+.hint[data-fx="in"] { animation: slide-in .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes slide-in { from { transform: translateX(-22px); opacity: 0; } }
+.feedback[data-fx="in"] { animation: pop .32s cubic-bezier(.2, 1.4, .4, 1); transform-origin: left center; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } }
+
+/* wrong answer: the whole panel shakes its head */
+.panel[data-fx="shake"] { animation: shake .42s linear; }
+@keyframes shake { 10%, 50%, 90% { transform: translateX(-9px); } 30%, 70% { transform: translateX(9px); } }
+
+/* counters jump when they change; the input ticks as you type */
+.hud [data-fx="bump"] { display: inline-block; animation: bump .4s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes bump { 35% { transform: scale(1.9); } }
+input[data-fx="type"] { animation: key .09s linear; }
+@keyframes key { 50% { transform: scale(1.012); } }
+
+/* START idles with a small bob */
+.blink { animation: breathe 1.5s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: translateY(-4px); box-shadow: 4px 8px 0 #000; } }
+.blink:hover, .blink:active { animation: none; }
+
+/* end of the day: one slow lap of the record; winners get a wave */
+.platter.lap, .platter.lap .tile { transition-duration: 4.5s; transition-timing-function: cubic-bezier(.45, 0, .2, 1); }
+.platter[data-end="win"] .orb { animation: wave .7s ease-in-out calc(var(--i) * 70ms) 6; }
+@keyframes wave { 40% { transform: translateY(-30%) scale(1.14); } }
+
+/* ---------- Panel: a flat arcade window ---------- */
+.panel, .tracklist-box, .info {
+  background: var(--panel); border: 4px solid var(--text);
+  box-shadow: 8px 8px 0 var(--pink), 8px 8px 0 4px #000;
+}
+.panel { padding: 26px; }
+.panel h1, .panel h2, .tracklist-box h2 {
+  font: clamp(15px, 2.6vw, 21px)/1.6 var(--px); font-weight: normal; margin: 0 0 18px;
+  color: var(--yellow); text-shadow: 3px 3px 0 var(--pink);
+}
+.panel p { margin: 0 0 14px; color: var(--dim); }
+.panel strong { color: var(--text); font-weight: normal; }
+.note { font-size: 19px; color: var(--dim); }
+
+.hint { display: inline-block; padding: 8px 10px; font: 10px/1.5 var(--px); color: var(--ink) !important; background: var(--cyan); }
+.snippet {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  min-height: 44px; margin-bottom: 14px;
+  font: 9px/1.6 var(--px); color: var(--pink);
+}
+.eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 24px; }
+.eq i { width: 6px; height: 16%; background: var(--line); }
+.eq.on i { background: var(--green); animation: eq .5s steps(5) infinite alternate; }
+.eq.on i:nth-child(2) { animation-delay: -.3s; background: var(--cyan); }
+.eq.on i:nth-child(3) { animation-delay: -.12s; background: var(--yellow); }
+.eq.on i:nth-child(4) { animation-delay: -.38s; background: var(--orange); }
+.eq.on i:nth-child(5) { animation-delay: -.2s; background: var(--pink); }
+@keyframes eq { from { height: 16%; } to { height: 100%; } }
+.bar { display: inline-flex; gap: 3px; }
+.bar i { width: 10px; height: 16px; background: var(--line); }
+.bar i.on { background: var(--yellow); }
+
+input[type="text"] {
+  width: 100%; padding: 12px 14px; outline: none;
+  font: 28px/1.1 var(--body); color: var(--green); caret-color: var(--green);
+  background: #000; border: 4px solid var(--line); border-radius: 0;
+}
+input[type="text"]::placeholder { color: var(--line); }
+input[type="text"]:focus { border-color: var(--cyan); }
+
+.row { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 18px; }
+.btn, .btn-small {
+  font: 12px/1 var(--px); cursor: pointer; border-radius: 0;
+  padding: 14px 18px; color: var(--text); background: var(--panel);
+  border: 4px solid var(--text); box-shadow: 4px 4px 0 #000;
+}
+.btn-small { font-size: 9px; padding: 9px 10px; border-width: 3px; color: var(--dim); border-color: var(--dim); background: #000; }
+.btn-main { background: var(--pink); color: #fff; }
+.btn:hover, .btn-small:hover { background: var(--yellow); color: var(--ink); border-color: var(--ink); }
+.btn:active, .btn-small:active { transform: translate(4px, 4px); box-shadow: none; }
+.btn:focus-visible, .btn-small:focus-visible, a:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+.btn:disabled, input:disabled { opacity: .5; cursor: default; }
+
+.feedback { min-height: 2.6em; margin-top: 14px !important; font: 10px/1.7 var(--px); }
+.feedback.ok { color: var(--ok); }
+.feedback.ko { color: var(--ko); }
+
+/* ---------- Tracklist ---------- */
+.tracklist-box { padding: 24px; margin-bottom: 36px; box-shadow: 8px 8px 0 var(--cyan), 8px 8px 0 4px #000; }
+.tracklist {
+  list-style: none; margin: 0 0 10px; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;
+}
+.tracklist li { display: flex; align-items: center; gap: 10px; padding: 8px; min-width: 0; background: #000; border: 3px solid var(--line); }
+.tracklist li.ok { border-color: var(--ok); }
+.tracklist li.ko { border-color: var(--ko); }
+.tracklist .l { font: 12px var(--px); width: 22px; text-align: center; flex: none; color: var(--yellow); }
+.tracklist img { width: 48px; height: 48px; flex: none; image-rendering: pixelated; background: #000; }
+.tracklist .t { min-width: 0; line-height: 1.05; }
+.tracklist .t b { display: block; font-weight: normal; color: var(--text); overflow-wrap: anywhere; }
+.tracklist .t span { color: var(--dim); font-size: 19px; }
+.tracklist a { color: var(--cyan); font-size: 18px; white-space: nowrap; }
+
+.info { max-width: 760px; margin: 0 auto; padding: 6px 26px 20px; color: var(--dim); box-shadow: 8px 8px 0 var(--purple), 8px 8px 0 4px #000; }
+.info h1, .info h2 { font: 12px/1.7 var(--px); font-weight: normal; color: var(--cyan); margin: 24px 0 10px; }
+.info li { margin-bottom: 4px; }
+.info strong { color: var(--text); font-weight: normal; }
+.info a, .foot a { color: var(--pink); }
+
+.foot {
+  max-width: 1040px; margin: 0 auto; padding: 26px 16px 30px;
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px;
+  color: var(--dim); font-size: 19px;
+}
+
+/* ---------- Game page: everything on one screen, no page scroll ---------- */
+body.app { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+.app .top { width: 100%; flex: none; padding: 12px 16px; }
+.app main { flex: 1; min-height: 0; width: 100%; padding-bottom: 0; display: flex; flex-direction: column; }
+.app .hud { flex: none; margin: 8px 0 0; }
+.app .game { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* the panel takes the space between scoreboard and record; it scrolls inside itself only if the screen is tiny */
+.app .panel { flex: 0 1 auto; width: 100%; margin: auto; overflow-y: auto; max-height: calc(100% - 44px); padding: 22px 24px; }
+.app .panel h1, .app .panel h2 { margin-bottom: 12px; }
+.app .feedback { min-height: 2.2em; margin-top: 10px !important; }
+.app .deck { flex: none; height: clamp(110px, 27vh, calc(var(--d) * .3 + 36px)); margin-top: 0; margin-bottom: 0; border-bottom: 0; }
+@media (max-width: 860px) {
+  .app .hud div { padding: 6px 2px; border-width: 3px; }
+  .app .top { padding: 10px 12px; gap: 8px; }
+  .app .vol input { width: 80px; }
+  .app .panel { padding: 16px; box-shadow: 5px 5px 0 var(--pink), 5px 5px 0 4px #000; }
+  .app .deck { height: clamp(96px, 20vh, 220px); }
+}
+@media (max-height: 640px) {
+  .app .deck { height: 96px; }
+}
+
+/* ---------- Pop-ups ---------- */
+.dlg {
+  width: min(620px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 22px 24px;
+  color: var(--dim); background: var(--panel); border: 4px solid var(--text); border-radius: 0;
+  box-shadow: 8px 8px 0 var(--cyan), 8px 8px 0 4px #000;
+  font: 22px/1.25 var(--body);
+}
+.dlg-wide { width: min(980px, calc(100vw - 32px)); }
+.dlg::backdrop { background: rgba(6, 1, 16, .78); }
+.dlg h2 { font: 14px/1.6 var(--px); font-weight: normal; margin: 0 0 14px; color: var(--yellow); text-shadow: 3px 3px 0 var(--pink); }
+.dlg ol { margin: 0 0 12px; padding-left: 28px; }
+.dlg li { margin-bottom: 6px; }
+.dlg strong { color: var(--text); font-weight: normal; }
+.dlg p { margin: 0 0 12px; }
+.dlg a { color: var(--pink); }
+.dlg-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.dlg-foot form { margin: 0 8px 8px auto; }
+
+/* ---------- Game console: scoreboard and panel share one column and one look ---------- */
+.app .hud { grid-template-columns: 1fr 1fr; width: 100%; max-width: 520px; margin-left: auto; margin-right: auto; }
+.app .panel {
+  max-width: 520px; padding: 18px 20px;
+  background: #000; border: 4px solid var(--line); box-shadow: none;
+}
+.app .panel h1, .app .panel h2 { font-size: clamp(13px, 2vw, 16px); margin-bottom: 10px; }
+.app .panel p { margin-bottom: 12px; }
+.app .snippet { min-height: 34px; margin-bottom: 10px; }
+.app .panel input[type="text"] { background: var(--bg); padding: 10px 12px; font-size: 26px; }
+.app .row { margin-top: 12px; gap: 12px; }
+.app .btn { padding: 12px 16px; }
+.app .feedback { min-height: 2em; }
+@media (max-width: 860px) { .app .panel { padding: 14px; box-shadow: none; } }
+
+/* START countdown */
+#snippet-label[data-fx="count"] { display: inline-block; font-size: 18px; color: var(--yellow); animation: count .5s cubic-bezier(.2, 1.4, .4, 1); transform-origin: left center; }
+@keyframes count { from { transform: scale(2.6); opacity: 0; } }
+
+/* pop-ups open with a pop; tracklist rows follow one by one */
+.dlg[open] { animation: dlg-in .24s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes dlg-in { from { transform: scale(.86); opacity: 0; } }
+.dlg[open]::backdrop { animation: fade .2s linear; }
+@keyframes fade { from { opacity: 0; } }
+.dlg[open] .tracklist li { animation: rise .3s cubic-bezier(.2, 1.2, .4, 1) backwards; animation-delay: calc(var(--i) * 22ms + 80ms); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+  .ball-wrap, .needle, .time.low, .eq.on i { animation: none; }
+  .platter, .tile { transition: none; }
+  .eq.on i { height: 60%; }
+}
+
+
+/* title screen: everything centred */
+#p-start { text-align: center; }
+#p-start .btn { display: block; margin: 4px auto 0; }
+
+/* ---------- Mode picker on the title screen ---------- */
+.modes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 12px; }
+.mode {
+  font: 9px/1 var(--px); padding: 9px; cursor: pointer; border-radius: 0;
+  color: var(--dim); background: var(--bg); border: 3px solid var(--line);
+}
+.mode:hover { color: var(--text); border-color: var(--dim); }
+.mode.on { color: var(--ink); background: var(--yellow); border-color: var(--yellow); }
+.mode:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+#mode-blurb { min-height: 2.5em; }
+.quit { margin-left: auto; align-self: center; }
+
+/* Unlimited: the second counter shows lives, and the record spins freely (it has no letters) */
+.hud.unl .t-ko { color: var(--pink); }
+.hud.unl .t-ko::before { content: "♥"; }
+.platter.free { animation: spin-free 7s linear infinite; }
+@keyframes spin-free { to { transform: rotate(360deg); } }
