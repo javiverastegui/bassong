@@ -9,12 +9,9 @@
   const LAUNCH = Date.UTC(2026, 10, 12); // wheel #1
   const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   const SCALE = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3, 784.0, 880.0, 1046.5];
-  const DECADES = { '70s': '1970s', '80s': '1980s', '90s': '1990s', '00s': '2000s', '10s': '2010s' };
-  const MODES = [
-    { id: 'all', label: 'GENERAL', blurb: 'Today\'s wheel: one song per letter, hits from every decade.' },
-    ...Object.keys(DECADES).map((d) => ({ id: d, label: d.toUpperCase(), blurb: `Today's wheel with songs from the ${DECADES[d]} only.` })),
-    { id: 'unl', label: 'UNLIMITED', blurb: `No wheel: songs keep coming until you make ${LIVES} mistakes. How many can you name?` },
-  ];
+  const MODES = ['all', '70s', '80s', '90s', '00s', '10s', 'unl'].map((id) => ({ id })); // names and blurbs live in lang.js
+  const modeLabel = (id) => tr('mode_' + id);
+  const modeBlurb = (id) => (id === 'all' ? tr('blurb_all') : id === 'unl' ? tr('blurb_unl', { n: LIVES }) : tr('blurb_dec', { dec: tr('dec_' + id) }));
 
   const $ = (id) => document.getElementById(id);
   const wheel = $('wheel');
@@ -37,13 +34,14 @@
   let loading = false;       // clock is paused while a snippet buffers
   let playToken = 0;
   let snippetTimer = null;
+  let getReady = false;      // true during the 3-2-1 before the first song
 
   // ---------- helpers ----------
   const calm = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function load(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function store(k, v) { try { localStorage.setItem(k, v); } catch { /* storage unavailable */ } }
   const pad = (n, w = 6) => String(n).padStart(w, '0');
-  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const songs = (n) => tr(n === 1 ? 'song_one' : 'song_other', { n });
 
   function today() {
     const d = new Date();
@@ -308,6 +306,8 @@
     return out;
   }
 
+  const signature = (items) => items.reduce((sum, it) => (sum + it.id) % 1e9, 0);
+
   function newGame(m) {
     const unl = m === 'unl';
     return {
@@ -322,7 +322,9 @@
     if (g.unl) return g;
     try {
       const s = JSON.parse(load('ab_run_' + m) || 'null');
-      if (s && s.key === day.key && s.items.length === g.items.length) {
+      // sig ties a save to the exact songs it was played with: if the catalogue has changed
+      // since, today's wheel is different and the old progress no longer applies
+      if (s && s.key === day.key && s.items.length === g.items.length && s.sig === signature(g.items)) {
         s.items.forEach(([state, heard, passed], i) => Object.assign(g.items[i], { state, heard: !!heard, passed: !!passed }));
         Object.assign(g, { idx: s.idx, time: s.time, done: s.done, fresh: false });
         g.hits = g.items.filter((it) => it.state === 'ok').length;
@@ -336,7 +338,7 @@
     const g = game;
     if (!g || g.unl) return;
     store('ab_run_' + g.mode, JSON.stringify({
-      key: day.key, idx: g.idx, time: g.time, done: g.done,
+      key: day.key, idx: g.idx, time: g.time, done: g.done, sig: signature(g.items),
       items: g.items.map((it) => [it.state, it.heard ? 1 : 0, it.passed ? 1 : 0]),
     }));
   }
@@ -443,24 +445,9 @@
   }
 
   // ---------- the mascot talks ----------
-  const LINES = {
-    hello: ['Hi, I\'m Bassong. Pick a wheel!'],
-    all: ['Every decade in one wheel.'],
-    decade: ['Good vintage, that one.', 'Ah, a classic catch.'],
-    unl: ['Three strikes and you\'re fish food.'],
-    ready: ['Ready? Dropping the needle…'],
-    ok: ['Nice catch!', 'Hooked it!', 'Reel good ear.', 'That one\'s a keeper.', 'Fin-tastic.'],
-    ko: ['That one got away.', 'Off the hook…', 'Holy mackerel, no.', 'Something\'s fishy there.'],
-    pass: ['Throwing it back.', 'We\'ll circle back.', 'Let it swim for now.'],
-    slow: ['Too slow! I felt that.'],
-    hurry: ['Hurry, I\'m drying out here!'],
-    tap: ['Tap play, my speakers are shy.'],
-    win: ['A full wheel! You\'re off the scale.'],
-    lose: ['Tomorrow\'s another tide.'],
-  };
   let talkTimer = 0;
   function say(key, text) {
-    const options = LINES[key] || [];
+    const options = trl('say_' + key);
     const line = text || options[Math.floor(Math.random() * options.length)] || '';
     $('say').textContent = line;
     fx($('say'), 'in');
@@ -525,7 +512,7 @@
     it.heard = true;
     saveGame();
     $('btn-play').hidden = true;
-    $('snippet-label').textContent = 'LOADING…';
+    $('snippet-label').textContent = tr('loading');
     setBar(10);
 
     const failed = (label) => {
@@ -541,7 +528,7 @@
     player.onplaying = () => {
       if (token !== playToken) return;
       loading = false;
-      $('snippet-label').textContent = 'NOW PLAYING';
+      $('snippet-label').textContent = tr('now_playing');
       $('eq').classList.add('on');
       $('fish').classList.add('sing'); // the bass sings along, woofer thumping
       live = true;
@@ -552,16 +539,16 @@
         setBar(Math.ceil(left * 2));
         fade = left < 0.4 ? Math.max(0, left / 0.4) : 1;
         player.volume = vol * fade;
-        if (left <= 0 || player.ended) stopSnippet(game.unl ? 'PLAYED' : 'PLAYED · PASS TO HEAR IT AGAIN NEXT LAP');
+        if (left <= 0 || player.ended) stopSnippet(game.unl ? tr('played') : tr('played_pass'));
       }, 80);
     };
-    player.onerror = () => failed('AUDIO ERROR');
+    player.onerror = () => failed(tr('audio_error'));
     player.src = it.preview;
     player.muted = false;
     fade = 1;
     player.volume = vol;
     const p = player.play();
-    if (p && p.catch) p.catch((e) => { if (e && e.name !== 'AbortError') failed('READY'); });
+    if (p && p.catch) p.catch((e) => { if (e && e.name !== 'AbortError') failed(tr('ready_label')); });
   }
 
   function preloadNext() {
@@ -603,10 +590,11 @@
     mode = m;
     store('ab_mode', m);
     modeButtons.forEach((b) => {
+      b.el.textContent = modeLabel(b.id);
       b.el.classList.toggle('on', b.id === m);
       b.el.setAttribute('aria-pressed', String(b.id === m));
     });
-    $('mode-blurb').textContent = MODES.find((x) => x.id === m).blurb;
+    $('mode-blurb').textContent = modeBlurb(m);
 
     const g = loadGame(m);
     const btn = $('btn-start'), note = $('start-note');
@@ -614,19 +602,19 @@
     btn.disabled = !g.items.length;
     note.textContent = '';
     if (!g.items.length) {
-      btn.textContent = 'NO SONGS YET';
+      btn.textContent = tr('no_songs');
     } else if (g.unl) {
       const best = Number(load('ab_best_unl') || 0);
-      btn.textContent = '▶ PRESS START';
-      if (best) note.textContent = `Your best: ${plural(best, 'song')}.`;
+      btn.textContent = tr('start');
+      if (best) note.textContent = tr('your_best', { songs: songs(best) });
     } else if (g.done) {
-      btn.textContent = 'VIEW RESULT';
-      note.textContent = `Played today: ${g.hits} of ${g.items.length}. New wheel tomorrow.`;
+      btn.textContent = tr('view_result');
+      note.textContent = tr('played_today', { h: g.hits, total: g.items.length });
     } else if (!g.fresh) {
-      btn.textContent = '▶ CONTINUE';
-      note.textContent = `Run in progress: ${g.time} s left.`;
+      btn.textContent = tr('continue');
+      note.textContent = tr('in_progress', { s: g.time });
     } else {
-      btn.textContent = '▶ PRESS START';
+      btn.textContent = tr('start');
     }
   }
 
@@ -674,7 +662,8 @@
     loading = true;
     $('btn-play').hidden = true;
     $('btn-pass').hidden = game.unl;
-    $('hint').textContent = 'GET READY';
+    getReady = true;
+    $('hint').textContent = tr('get_ready');
     say('ready');
     fx($('hint'), 'in');
     $('feedback').textContent = '';
@@ -687,6 +676,7 @@
       if (n === 0) {
         if ($('snippet-label').dataset) delete $('snippet-label').dataset.fx; // back to the normal label style
         loading = false;
+        getReady = false;
         if (game.items[game.idx].state !== 'pending') advance(); else showLetter();
         return;
       }
@@ -698,10 +688,12 @@
     count(3);
   }
 
+  const hintText = (it) => tr(it.contains ? 'hint_contains' : 'hint_starts', { l: it.l });
+
   function showLetter() {
     const it = game.items[game.idx];
     if (game.unl) game.time = SONG_TIME; // unlimited: a fresh clock for every song
-    $('hint').textContent = `TITLE ${it.contains ? 'CONTAINS' : 'STARTS WITH'} "${it.l}"`;
+    $('hint').textContent = hintText(it);
     fx($('hint'), 'in');
     fx($('needle'), 'tap');
     $('feedback').textContent = '';
@@ -710,7 +702,7 @@
     input.value = '';
     lock(false);
     paint();
-    if (it.heard) stopSnippet('ALREADY PLAYED THIS LAP');
+    if (it.heard) stopSnippet(tr('already_played'));
     else { playSnippet(); preloadNext(); }
     input.focus({ preventScroll: true });
   }
@@ -790,7 +782,7 @@
       it.state = 'ko';
       game.misses++;
       if (game.unl) game.lives--;
-      fb.textContent = `${text === null ? '⏱ TIME UP' : '✖ IT WAS'}: ${it.title} — ${it.artist}`;
+      fb.textContent = `${text === null ? tr('time_up') : tr('it_was')}: ${it.title} — ${it.artist}`;
       fb.className = 'feedback ko';
       sfxMiss();
       say(text === null ? 'slow' : 'ko');
@@ -836,6 +828,23 @@
     showEnd();
   }
 
+  // Title and summary of the finished run, in the current language.
+  function endText() {
+    const g = game;
+    const total = g.items.length;
+    const won = g.hits === total;
+    if (g.unl) {
+      $('end-title').textContent = tr(won ? 'end_unl_all' : 'game_over');
+      $('end-summary').textContent = tr('unl_summary', { songs: songs(g.hits) }) +
+        (g.newBest ? ' ' + tr('new_best') : g.best ? ' ' + tr('best_short', { n: g.best }) : '');
+    } else {
+      $('end-title').textContent = tr(won ? 'wheel_done' : 'wheel_fail');
+      $('end-summary').textContent = won
+        ? tr('won_summary', { total, s: g.time })
+        : tr('lost_summary', { h: g.hits, total, m: g.misses, p: total - g.hits - g.misses });
+    }
+  }
+
   function showEnd() {
     const g = game;
     raiseRecord(false);
@@ -848,19 +857,13 @@
     clearInterval(nextTimer);
 
     if (g.unl) {
-      $('end-title').textContent = won ? 'YOU NAMED THEM ALL!' : 'GAME OVER';
-      $('end-summary').textContent = `You named ${plural(g.hits, 'song')}.` +
-        (g.newBest ? ' New personal best!' : g.best ? ` Your best: ${g.best}.` : '');
+      endText();
       $('next').textContent = '';
       wheel.classList.remove('free');
-      say('', `${plural(g.hits, 'song')}. Not bad for a land creature.`);
+      say('', tr('say_unl_end', { songs: songs(g.hits) }));
       if (g.newBest || won) for (let k = 0; k < 4; k++) setTimeout(() => burst(DISCO, 22, 3), k * 450);
     } else {
-      const pending = total - g.hits - g.misses;
-      $('end-title').textContent = won ? 'WHEEL COMPLETE!' : 'NOT THIS TIME';
-      $('end-summary').textContent = won
-        ? `All ${total} songs named, with ${g.time} s to spare.`
-        : `${g.hits} of ${total} right, ${g.misses} wrong, ${pending} unanswered.`;
+      endText();
 
       // The record takes a slow full lap so every letter's result passes under the needle.
       wheel.classList.add('lap');
@@ -874,7 +877,7 @@
         const now = new Date();
         const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
         const s = Math.max(0, Math.floor((next - now) / 1000));
-        $('next').textContent = `Next wheel in ${pad(Math.floor(s / 3600), 2)}:${pad(Math.floor(s / 60) % 60, 2)}:${pad(s % 60, 2)}`;
+        $('next').textContent = tr('next_wheel', { time: `${pad(Math.floor(s / 3600), 2)}:${pad(Math.floor(s / 60) % 60, 2)}:${pad(s % 60, 2)}` });
         if (s === 0) location.reload();
       };
       countdown();
@@ -909,10 +912,10 @@
     const link = location.href.split('?')[0];
     let text;
     if (g.unl) {
-      text = `Bassong Unlimited 🎵 I named ${plural(g.hits, 'song')} in a row. Can you beat that?\n${link}`;
+      text = `${tr('share_unl', { songs: songs(g.hits) })}\n${link}`;
     } else {
       const squares = g.items.map((it) => (it.state === 'ok' ? '🟩' : it.state === 'ko' ? '🟥' : '⬜')).join('');
-      const label = MODES.find((x) => x.id === g.mode).label;
+      const label = modeLabel(g.mode);
       text = `Bassong ${label} #${day.no} 🎵 ${g.hits}/${g.items.length}${g.hits === g.items.length ? ' ✅' : ''}\n${squares}\n${link}`;
     }
     const note = $('shared');
@@ -921,12 +924,12 @@
         await navigator.share({ text });
       } else {
         await navigator.clipboard.writeText(text);
-        note.textContent = 'COPIED TO CLIPBOARD';
+        note.textContent = tr('copied');
         note.className = 'feedback ok';
       }
     } catch (e) {
       if (e && e.name === 'AbortError') return; // share sheet dismissed
-      note.textContent = 'COULD NOT SHARE FROM THIS BROWSER';
+      note.textContent = tr('share_fail');
       note.className = 'feedback ko';
     }
   }
@@ -936,8 +939,8 @@
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'mode';
-    el.textContent = m.label;
-    el.addEventListener('click', () => { beep(520, 0.04); selectMode(m.id); say(DECADES[m.id] ? 'decade' : m.id); });
+    el.textContent = modeLabel(m.id);
+    el.addEventListener('click', () => { beep(520, 0.04); selectMode(m.id); say(m.id === 'all' || m.id === 'unl' ? m.id : 'decade'); });
     $('modes').appendChild(el);
     modeButtons.push({ id: m.id, el });
   });
@@ -962,6 +965,14 @@
     e.preventDefault();
     pass();
   });
+  // Language: lang.js swaps the static text; this rewrites what the game painted itself.
+  function refreshText() {
+    if (!panels.start.hidden) { selectMode(mode); say('hello'); }
+    else if (!panels.play.hidden && game) $('hint').textContent = getReady ? tr('get_ready') : hintText(game.items[game.idx]);
+    else if (!panels.end.hidden && game) endText();
+  }
+  $('btn-lang').addEventListener('click', () => { setLang(LANG === 'es' ? 'en' : 'es', true); refreshText(); });
+
   $('btn-sfx').addEventListener('click', () => {
     sfx = !sfx;
     store('ab_sfx', sfx ? '1' : '0');
@@ -1006,6 +1017,7 @@
   $('year').textContent = new Date().getFullYear();
   $('day-no').textContent = `#${day.no}`;
   paintSfx();
+  setLang(detectLang(), false);
   show('start');
   selectMode(load('ab_mode') || 'all');
   say('hello');

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Privacy — Bassong</title>
+  <title data-i18n="p_title">Privacy — Bassong</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -13,24 +13,27 @@
   </header>
   <main>
     <section class="info">
-      <h1>Privacy</h1>
-      <h2>Who runs this site</h2>
-      <p>Javier Verastegui — contact: <a href="mailto:javier.verastegui@uc.cl">javier.verastegui@uc.cl</a>.</p>
+      <h1 data-i18n="p_h1">Privacy</h1>
+      <h2 data-i18n="p_who_h">Who runs this site</h2>
+      <p data-i18n-html="p_who">Javier Verastegui — contact: <a href="mailto:javier.verastegui@uc.cl">javier.verastegui@uc.cl</a>.</p>
 
-      <h2>What the game stores</h2>
-      <p>Bassong needs no account. It keeps your progress for today's wheel, your hi-score and your sound setting in your browser's local storage. None of it is sent to a server.</p>
+      <h2 data-i18n="p_stores_h">What the game stores</h2>
+      <p data-i18n="p_stores">Bassong needs no account. It keeps your progress on today's wheels, your best unlimited run and your settings (sound, volume, mode and language) in your browser's local storage. None of it is sent to a server.</p>
 
-      <h2>Song previews</h2>
-      <p>Song snippets and cover art are loaded from Apple's iTunes servers, which receive your IP address as with any web request. Previews are provided courtesy of iTunes.</p>
+      <h2 data-i18n="p_previews_h">Song previews</h2>
+      <p data-i18n="p_previews">Song snippets and cover art are loaded from Apple's iTunes servers, which receive your IP address as with any web request. Previews are provided courtesy of iTunes.</p>
 
-      <h2>Fonts</h2>
-      <p>Fonts are loaded from Google Fonts.</p>
+      <h2 data-i18n="p_fonts_h">Fonts</h2>
+      <p data-i18n="p_fonts">Fonts are loaded from Google Fonts.</p>
 
-      <h2>Ads and tracking</h2>
-      <p>Bassong shows no ads and uses no analytics or tracking cookies.</p>
+      <h2 data-i18n="p_ads_h">Ads and tracking</h2>
+      <p data-i18n="p_ads">Bassong shows no ads and uses no analytics or tracking cookies.</p>
 
-      <p><a href="./">← Back to the game</a></p>
+      <p><a href="./" data-i18n="p_back">← Back to the game</a></p>
     </section>
   </main>
+
+  <script src="lang.js"></script>
+  <script>setLang(detectLang(), false);</script>
 </body>
 </html>

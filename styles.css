@@ -407,3 +407,8 @@ body.app { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-
 .bubble[data-fx="in"] { animation: pop .28s cubic-bezier(.2, 1.4, .4, 1); transform-origin: right bottom; }
 @media (max-width: 860px) { .fish { width: 74px; height: 40px; } .bubble { font-size: 18px; } .mascot { min-height: 46px; } }
 @media (max-height: 600px) { .mascot { display: none; } .app .panel { margin: auto; } }
+
+/* Language button: EN / ES, the active one lit */
+.lang { display: inline-flex; gap: 4px; }
+.lang span { opacity: .55; }
+.lang .on { opacity: 1; color: var(--yellow); }
