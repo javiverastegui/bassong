@@ -987,7 +987,17 @@
   $('logo-art').style.backgroundImage = `url(${FISH_A})`;
   const icon = document.createElement('link');
   icon.rel = 'icon';
-  icon.href = FISH_A;
+  // Tab icon: just the bass speaker — rim, surround, cone and dust cap.
+  icon.href = sprite(16, (x, y) => {
+    const d = Math.sqrt((x - 7.5) * (x - 7.5) + (y - 7.5) * (y - 7.5));
+    if (d > 8) return null;
+    if (d > 6.9) return '#000';
+    if (d > 5.6) return '#ff3fa4';
+    if (d > 4.7) return '#000';
+    if (d > 2.4) return (x + y) % 2 ? '#8d8aa6' : '#a9a6c2';
+    if (d > 1.5) return '#000';
+    return '#ffe45c';
+  }).slice(4, -1); // sprite() returns url(...); the link wants the bare data URL
   document.head.appendChild(icon);
 
   drawDisc($('disc'));
