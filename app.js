@@ -84,7 +84,7 @@
   }
 
   // The mascot: a largemouth bass, 24 x 13 pixels, facing left. Two frames: mouth shut and mouth open.
-  const FISH_COLOURS = { k: '#000000', g: '#5aa83c', d: '#2f6e2c', b: '#f0ecc0', w: '#ffffff', f: '#ffb43d', m: '#ff3fa4' };
+  const FISH_COLOURS = { k: '#000000', g: '#5aa83c', d: '#2f6e2c', b: '#f0ecc0', w: '#ffffff', f: '#ffb43d', m: '#ff3fa4', s: '#8d8aa6' };
   const FISH_SHUT = [
     '..........kkkk..........',
     '........kkffffk.........',
@@ -106,6 +106,18 @@
       : y === 9 ? 'kmmmkbbbbbbbbbbbbdk..kfk'
       : y === 10 ? '.kkkkbbbbbbffbbkkk....kk'
       : row));
+
+  // It is a bass, so it carries a bass speaker on its chest: rim, cone and dust cap.
+  // In the open-mouth frame the cone is pushed out (lighter), so it thumps as the fish talks or sings.
+  const stamp = (rows, x, y, patch) => rows.map((row, r) => {
+    const p = patch[r - y];
+    if (!p) return row;
+    return [...row].map((c, i) => (p[i - x] && p[i - x] !== ' ' ? p[i - x] : c)).join('');
+  });
+  const WOOFER = [' kkk ', 'ksssk', 'ksksk', 'ksssk', ' kkk '];
+  const WOOFER_OUT = [' kkk ', 'kswsk', 'kwkwk', 'kswsk', ' kkk '];
+  FISH_SHUT.splice(0, FISH_SHUT.length, ...stamp(FISH_SHUT, 9, 5, WOOFER));
+  FISH_OPEN.splice(0, FISH_OPEN.length, ...stamp(FISH_OPEN, 9, 5, WOOFER_OUT));
 
   // Paints rows of palette letters on a canvas and returns it as a data URL.
   function rowsSprite(rows, colours) {
@@ -499,6 +511,7 @@
     player.pause();
     loading = false;
     $('eq').classList.remove('on');
+    $('fish').classList.remove('sing');
     live = false;
     setBar(0);
     if (label) $('snippet-label').textContent = label;
@@ -530,6 +543,7 @@
       loading = false;
       $('snippet-label').textContent = 'NOW PLAYING';
       $('eq').classList.add('on');
+      $('fish').classList.add('sing'); // the bass sings along, woofer thumping
       live = true;
       clearInterval(snippetTimer);
       snippetTimer = setInterval(() => {

@@ -393,7 +393,8 @@ body.app { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-
 }
 @keyframes swim { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-5px) rotate(2deg); } }
 /* talking: the mouth flaps between two frames */
-.fish.talk { animation: swim 2.4s ease-in-out infinite alternate, yap .26s steps(1) infinite; }
+.fish.talk, .fish.sing { animation: swim 2.4s ease-in-out infinite alternate, yap .26s steps(1) infinite; }
+.fish.sing:not(.talk) { animation-duration: 2.4s, .5s; }
 @keyframes yap { 50% { background-image: var(--fish-b); } }
 .bubble {
   position: relative; margin: 0 0 14px; padding: 6px 10px; max-width: 360px;
